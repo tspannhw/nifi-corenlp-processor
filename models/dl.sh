@@ -1,1 +1,1 @@
-wget http://nlp.stanford.edu/software/stanford-english-corenlp-2016-10-31-models.jar
+wget http://nlp.stanford.edu/software/stanford-english-corenlp-2018-02-27-models.jar
