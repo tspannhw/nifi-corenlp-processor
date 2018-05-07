@@ -54,7 +54,7 @@ public class CoreNLPProcessorTest {
 	@Test
 	public void testProcessor() {
 		
-		testRunner.setProperty(MY_PROPERTY, "This is the worst unit test of sentiment analysis ever, just horrible.");
+		testRunner.setProperty(MY_PROPERTY, "This is the worst unit test of sentiment analysis ever, just horrible. ");
 		
 		try {
 			testRunner.enqueue(new FileInputStream(new File("src/test/resources/test.csv")));
@@ -78,4 +78,62 @@ public class CoreNLPProcessorTest {
 			}
 		}
 	}
+	
+	@Test
+	public void testProcessorHappy() {
+		
+		testRunner.setProperty(MY_PROPERTY, "This is best use of Apache NiFi that I have ever seen, good job. ");
+		
+		try {
+			testRunner.enqueue(new FileInputStream(new File("src/test/resources/test.csv")));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+
+		testRunner.setValidateExpressionUsage(false);
+		testRunner.run();
+		testRunner.assertValid();
+		List<MockFlowFile> successFiles = testRunner.getFlowFilesForRelationship(CoreNLPProcessor.REL_SUCCESS);
+
+		for (MockFlowFile mockFile : successFiles) {
+			try {
+				System.out.println("FILE:" + new String(mockFile.toByteArray(), "UTF-8"));
+				System.out.println("Attribute: " + mockFile.getAttribute(CoreNLPProcessor.ATTRIBUTE_OUTPUT_NAME));
+				
+				assertNotNull(  mockFile.getAttribute(CoreNLPProcessor.ATTRIBUTE_OUTPUT_NAME) );
+			} catch (UnsupportedEncodingException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	@Test
+	public void testProcessorNeutral() {
+		
+		testRunner.setProperty(MY_PROPERTY, "Cats are black.");
+		
+		try {
+			testRunner.enqueue(new FileInputStream(new File("src/test/resources/test.csv")));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+
+		testRunner.setValidateExpressionUsage(false);
+		testRunner.run();
+		testRunner.assertValid();
+		List<MockFlowFile> successFiles = testRunner.getFlowFilesForRelationship(CoreNLPProcessor.REL_SUCCESS);
+
+		for (MockFlowFile mockFile : successFiles) {
+			try {
+				System.out.println("FILE:" + new String(mockFile.toByteArray(), "UTF-8"));
+				System.out.println("Attribute: " + mockFile.getAttribute(CoreNLPProcessor.ATTRIBUTE_OUTPUT_NAME));
+				
+				assertNotNull(  mockFile.getAttribute(CoreNLPProcessor.ATTRIBUTE_OUTPUT_NAME) );
+			} catch (UnsupportedEncodingException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	
 }

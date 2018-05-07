@@ -39,106 +39,107 @@ import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
-   
-@Tags({"corenlpprocessor"})
+
+@Tags({ "corenlpprocessor" })
 @CapabilityDescription("Run Stanford CoreNLP Sentiment Analysis")
 @SeeAlso({})
-@ReadsAttributes({@ReadsAttribute(attribute="", description="")})
-@WritesAttributes({@WritesAttribute(attribute="", description="")})
+@ReadsAttributes({ @ReadsAttribute(attribute = "sentence", description = "sentence to analyze") })
+@WritesAttributes({
+		@WritesAttribute(attribute = "sentiment", description = "Stanford CoreNLP sentiment analysis of that sentence.") })
 public class CoreNLPProcessor extends AbstractProcessor {
 
 	public static final String ATTRIBUTE_OUTPUT_NAME = "sentiment";
 	public static final String ATTRIBUTE_INPUT_NAME = "sentence";
 	public static final String PROPERTY_NAME_EXTRA = "Extra Resources";
-	
-    public static final PropertyDescriptor MY_PROPERTY = new PropertyDescriptor
-            .Builder().name(ATTRIBUTE_INPUT_NAME)
-            .description("A sentence to parse, such as a Tweet.")
-            .required(true)
-            .expressionLanguageSupported(true)
-            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
-            .build();
-    
-    public static final Relationship REL_SUCCESS = new Relationship.Builder()
-            .name("success")
-            .description("Successfully determine sentiment.")
-            .build();
 
-    public static final Relationship REL_FAILURE = new Relationship.Builder()
-            .name("failure")
-            .description("Failed to determine sentiment.")
-            .build();
+	public static final PropertyDescriptor MY_PROPERTY = new PropertyDescriptor.Builder().name(ATTRIBUTE_INPUT_NAME)
+			.description("A sentence to parse, such as a Tweet.").required(true).expressionLanguageSupported(true)
+			.addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
 
-    
-    private List<PropertyDescriptor> descriptors;
+	public static final Relationship REL_SUCCESS = new Relationship.Builder().name("success")
+			.description("Successfully determine sentiment.").build();
 
-    private Set<Relationship> relationships;
+	public static final Relationship REL_FAILURE = new Relationship.Builder().name("failure")
+			.description("Failed to determine sentiment.").build();
 
-    private SentimentService service;
-    
-    @Override
-    protected void init(final ProcessorInitializationContext context) {
-        final List<PropertyDescriptor> descriptors = new ArrayList<PropertyDescriptor>();
-        descriptors.add(MY_PROPERTY);
-        this.descriptors = Collections.unmodifiableList(descriptors);
+	private List<PropertyDescriptor> descriptors;
 
-        final Set<Relationship> relationships = new HashSet<Relationship>();
-        relationships.add(REL_SUCCESS);
-        relationships.add(REL_FAILURE);
-        this.relationships = Collections.unmodifiableSet(relationships);
-    }
+	private Set<Relationship> relationships;
 
-    @Override
-    public Set<Relationship> getRelationships() {
-        return this.relationships;
-    }
+	private SentimentService service;
 
-    @Override
-    public final List<PropertyDescriptor> getSupportedPropertyDescriptors() {
-        return descriptors;
-    }
+	@Override
+	protected void init(final ProcessorInitializationContext context) {
+		final List<PropertyDescriptor> descriptors = new ArrayList<PropertyDescriptor>();
+		descriptors.add(MY_PROPERTY);
+		this.descriptors = Collections.unmodifiableList(descriptors);
 
-    @OnScheduled
-    public void onScheduled(final ProcessContext context) {
-    	return;
-    }
+		final Set<Relationship> relationships = new HashSet<Relationship>();
+		relationships.add(REL_SUCCESS);
+		relationships.add(REL_FAILURE);
+		this.relationships = Collections.unmodifiableSet(relationships);
+	}
 
-    @Override
-    public void onTrigger(final ProcessContext context, final ProcessSession session) throws ProcessException {
-        FlowFile flowFile = session.get();
-        if ( flowFile == null ) {
-        	flowFile = session.create();
-        }               
-		try {			
-				flowFile.getAttributes();
-						
-	            service = new SentimentService();   
+	@Override
+	public Set<Relationship> getRelationships() {
+		return this.relationships;
+	}
 
-	            String sentence = flowFile.getAttribute(ATTRIBUTE_INPUT_NAME);
-	            String sentence2 = context.getProperty(ATTRIBUTE_INPUT_NAME).evaluateAttributeExpressions(flowFile).getValue();
-	            
-	            if ( sentence == null) {   
-	            	sentence = sentence2;
-	            }
-	            if ( sentence == null) {
-	            	return;
-	            }
-	       	
-	        	String value = service.getSentiment( sentence );
-	        	
-	        	if ( value == null) { 
-	        		return;
-	        	}
+	@Override
+	public final List<PropertyDescriptor> getSupportedPropertyDescriptors() {
+		return descriptors;
+	}
 
-			flowFile = session.putAttribute(flowFile, "mime.type", "application/json");
+	/**
+	 * initialize sentiment service
+	 */
+	private void initService() {
+		service = new SentimentService();
+	}
+
+	@OnScheduled
+	public void onScheduled(final ProcessContext context) {
+		initService();
+		return;
+	}
+
+	@Override
+	public void onTrigger(final ProcessContext context, final ProcessSession session) throws ProcessException {
+		FlowFile flowFile = session.get();
+		if (flowFile == null) {
+			flowFile = session.create();
+		}
+		if (service == null) {
+			initService();
+		}
+		try {
+			flowFile.getAttributes();
+
+			String sentence = flowFile.getAttribute(ATTRIBUTE_INPUT_NAME);
+			String sentence2 = context.getProperty(ATTRIBUTE_INPUT_NAME).evaluateAttributeExpressions(flowFile)
+					.getValue();
+
+			if (sentence == null) {
+				sentence = sentence2;
+			}
+			if (sentence == null) {
+				return;
+			}
+
+			String value = service.getSentimentNew(sentence);
+
+			if (value == null) {
+				return;
+			}
+
 			flowFile = session.putAttribute(flowFile, ATTRIBUTE_OUTPUT_NAME, value);
 
 			session.transfer(flowFile, REL_SUCCESS);
 			session.commit();
-		   } catch (final Throwable t) {
-			   getLogger().error("Unable to process Sentiment Processor file " + t.getLocalizedMessage()) ;
-			   getLogger().error("{} failed to process due to {}; rolling back session", new Object[]{this, t});
-	            throw t;
+		} catch (final Throwable t) {
+			getLogger().error("Unable to process Sentiment Processor file " + t.getLocalizedMessage());
+			getLogger().error("{} failed to process due to {}; rolling back session", new Object[] { this, t });
+			throw t;
 		}
-    }
+	}
 }

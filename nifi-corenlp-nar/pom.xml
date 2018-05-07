@@ -19,7 +19,7 @@
     <parent>
         <groupId>com.dataflowdeveloper</groupId>
         <artifactId>corenlp-processor</artifactId>
-        <version>1.0</version>
+        <version>1.6</version>
     </parent>
 
     <artifactId>nifi-corenlp-nar</artifactId>
@@ -33,7 +33,7 @@
         <dependency>
             <groupId>com.dataflowdeveloper</groupId>
             <artifactId>nifi-corenlp-processors</artifactId>
-            <version>1.0</version>
+            <version>1.6</version>
         </dependency>
     </dependencies>
 
